@@ -1,0 +1,45 @@
+name: OpenSensor native Redis lock probe
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  compile-probe-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 34776803146
+          name: opensensor-journal-client-d0b27cec431aa88860ff28f1461ed453155003e2
+          path: pinned-runtime
+      - name: Compile isolated probe against the previously validated runtime
+        run: |
+          python3 - <<'PY'
+          import hashlib, pathlib, zipfile
+          matches = list(pathlib.Path('pinned-runtime').rglob('*boot*.jar'))
+          assert len(matches) == 1
+          jar = matches[0]
+          assert hashlib.sha256(jar.read_bytes()).hexdigest() == '6d052af887cd4f530ec36b1cd2d4a1be99bda9ace1bd1f1c7b73d42e842b28f7'
+          target = pathlib.Path('probe-libs')
+          target.mkdir()
+          with zipfile.ZipFile(jar) as source:
+              for name in source.namelist():
+                  if name.startswith('BOOT-INF/lib/') and name.endswith('.jar'):
+                      (target / pathlib.Path(name).name).write_bytes(source.read(name))
+          PY
+          mkdir probe-classes
+          javac --release 21 -cp 'probe-libs/*' -d probe-classes redis-lock/src/test/java/com/netflix/conductor/redislock/NativeRedisLockProbe.java
+          sha256sum redis-lock/src/test/java/com/netflix/conductor/redislock/NativeRedisLockProbe.java > probe-classes/probe-source.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: opensensor-native-lock-probe-${{ github.sha }}
+          path: probe-classes/
+          if-no-files-found: error
