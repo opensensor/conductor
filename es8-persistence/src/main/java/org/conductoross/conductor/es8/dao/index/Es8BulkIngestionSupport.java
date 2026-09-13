@@ -103,6 +103,11 @@ class Es8BulkIngestionSupport {
             return;
         }
 
+        if (JournalRequestIdentity.generation(properties) != null) {
+            throw new IllegalStateException(
+                    "Unidentified buffered indexing is disabled in the journal profile");
+        }
+
         BulkOperation operation =
                 BulkOperation.of(
                         op ->
@@ -128,10 +133,12 @@ class Es8BulkIngestionSupport {
     private void indexObjectSynchronously(
             String index, String docType, String docId, Object doc, Refresh refreshPolicy) {
         long startTime = System.currentTimeMillis();
+        ElasticsearchClient requestClient =
+                JournalRequestIdentity.forWrite(elasticSearchClient, properties);
         try {
             retryTemplate.execute(
                     context -> {
-                        elasticSearchClient.index(
+                        requestClient.index(
                                 i -> {
                                     i.index(index).document(doc).refresh(refreshPolicy);
                                     if (docId != null) {

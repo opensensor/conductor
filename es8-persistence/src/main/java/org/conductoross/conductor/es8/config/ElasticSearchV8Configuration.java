@@ -22,12 +22,15 @@ import java.util.List;
 
 import javax.net.ssl.SSLContext;
 
+import org.apache.http.Header;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.message.BasicHeader;
 import org.conductoross.conductor.es8.dao.index.ElasticSearchRestDAOV8;
+import org.conductoross.conductor.es8.dao.index.JournalRequestIdentity;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
 import org.slf4j.Logger;
@@ -60,6 +63,15 @@ public class ElasticSearchV8Configuration {
     @Bean
     public RestClientBuilder elasticRestClientBuilder(ElasticSearchProperties properties) {
         RestClientBuilder builder = RestClient.builder(convertToHttpHosts(properties.toURLs()));
+        String generation = JournalRequestIdentity.generation(properties);
+        if (generation != null) {
+            if (properties.isAutoIndexManagementEnabled() || !properties.isRefreshOnWrite()) {
+                throw new IllegalStateException(
+                        "Journal profile requires external index management and synchronous refreshOnWrite");
+            }
+            builder.setDefaultHeaders(
+                    new Header[] {new BasicHeader("X-OpenSensor-Generation", generation)});
+        }
 
         CredentialsProvider credentialsProvider = null;
         if (properties.getRestClientConnectionRequestTimeout() > 0) {

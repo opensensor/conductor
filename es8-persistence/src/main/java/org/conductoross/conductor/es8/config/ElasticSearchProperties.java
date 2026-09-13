@@ -87,6 +87,17 @@ public class ElasticSearchProperties {
      */
     private String documentTypeOverride = "";
 
+    /** Optional externally fenced journal generation. Null keeps direct ES behavior unchanged. */
+    private Long journalGeneration;
+
+    public Long getJournalGeneration() {
+        return journalGeneration;
+    }
+
+    public void setJournalGeneration(Long journalGeneration) {
+        this.journalGeneration = journalGeneration;
+    }
+
     /** Elasticsearch basic auth username */
     private String username;
 

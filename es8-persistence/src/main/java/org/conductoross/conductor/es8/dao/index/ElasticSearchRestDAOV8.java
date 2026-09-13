@@ -392,11 +392,13 @@ public class ElasticSearchRestDAOV8 implements IndexDAO {
                     BulkOperation.of(op -> op.index(i -> i.index(logIndexName).document(log))));
         }
 
+        ElasticsearchClient requestClient =
+                JournalRequestIdentity.forWrite(elasticSearchClient, properties);
         try {
             Refresh refreshPolicy = writeRefreshPolicy();
             executeWithRetry(
                     () ->
-                            elasticSearchClient.bulk(
+                            requestClient.bulk(
                                     b -> {
                                         b.operations(operations);
                                         if (refreshPolicy != null) {
@@ -856,11 +858,13 @@ public class ElasticSearchRestDAOV8 implements IndexDAO {
     }
 
     private void deleteByQuery(String indexName, Query query, String description) {
+        ElasticsearchClient requestClient =
+                JournalRequestIdentity.forWrite(elasticSearchClient, properties);
         try {
             DeleteByQueryResponse response =
                     executeWithRetry(
                             () ->
-                                    elasticSearchClient.deleteByQuery(
+                                    requestClient.deleteByQuery(
                                             d -> d.index(indexName).query(query).refresh(true)));
             if (response.failures() != null && !response.failures().isEmpty()) {
                 logger.warn(
@@ -955,12 +959,14 @@ public class ElasticSearchRestDAOV8 implements IndexDAO {
 
     private UpdateOutcome updateById(String indexOrAlias, String id, Map<String, Object> source)
             throws IOException {
+        ElasticsearchClient requestClient =
+                JournalRequestIdentity.forWrite(elasticSearchClient, properties);
         try {
             Refresh refreshPolicy = writeRefreshPolicy();
             UpdateResponse<Map> response =
                     executeWithRetry(
                             () ->
-                                    elasticSearchClient.update(
+                                    requestClient.update(
                                             u -> {
                                                 u.index(indexOrAlias).id(id).doc(source);
                                                 if (refreshPolicy != null) {
@@ -1030,12 +1036,14 @@ public class ElasticSearchRestDAOV8 implements IndexDAO {
     }
 
     private DeleteOutcome deleteById(String indexName, String id) throws IOException {
+        ElasticsearchClient requestClient =
+                JournalRequestIdentity.forWrite(elasticSearchClient, properties);
         try {
             Refresh refreshPolicy = writeRefreshPolicy();
             DeleteResponse response =
                     executeWithRetry(
                             () ->
-                                    elasticSearchClient.delete(
+                                    requestClient.delete(
                                             d -> {
                                                 d.index(indexName).id(id);
                                                 if (refreshPolicy != null) {
