@@ -153,3 +153,11 @@ springBoot {
 }
 
 compileJava.dependsOn bootBuildInfo
+
+tasks.named('test') {
+    // The subprocess regression must load the real application and dependencies.
+    systemProperty 'conductor.test.classpath', sourceSets.test.runtimeClasspath.asPath
+    if (project.hasProperty('startupBaseline')) {
+        systemProperty 'conductor.test.startupBaseline', project.property('startupBaseline')
+    }
+}

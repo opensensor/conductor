@@ -3,6 +3,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: opensensor-journal-client-${{ github.ref }}
   cancel-in-progress: false
@@ -17,9 +18,29 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
+      - name: Download the exact previously deployed startup baseline
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 34776803146
+          name: opensensor-journal-client-d0b27cec431aa88860ff28f1461ed453155003e2
+          path: startup-baseline-artifact
+      - name: Verify and extract only the original main class for the negative control
+        run: |
+          python3 - <<'PY'
+          import hashlib, pathlib, zipfile
+          matches=list(pathlib.Path('startup-baseline-artifact').rglob('*boot*.jar'))
+          assert len(matches)==1
+          data=matches[0].read_bytes()
+          assert hashlib.sha256(data).hexdigest()=='6d052af887cd4f530ec36b1cd2d4a1be99bda9ace1bd1f1c7b73d42e842b28f7'
+          with zipfile.ZipFile(matches[0]) as jar:
+              output=pathlib.Path('startup-baseline/com/netflix/conductor/Conductor.class')
+              output.parent.mkdir(parents=True)
+              output.write_bytes(jar.read('BOOT-INF/classes/com/netflix/conductor/Conductor.class'))
+          PY
       - name: Check formatting and validate the ES8 client
         run: |
-          ./gradlew --no-daemon --max-workers=2 :conductor-es8-persistence:spotlessCheck :conductor-es8-persistence:test
+          ./gradlew --no-daemon --max-workers=2 :conductor-es8-persistence:spotlessCheck :conductor-es8-persistence:test :conductor-server:spotlessCheck :conductor-server:test -PindexingBackend=elasticsearch8 -PstartupBaseline="${GITHUB_WORKSPACE}/startup-baseline"
       - name: Build server artifact only
         run: |
           ./gradlew --no-daemon --max-workers=2 :conductor-server:bootJar -PindexingBackend=elasticsearch8
@@ -32,4 +53,6 @@ jobs:
           path: |
             es8-persistence/build/reports/tests/
             es8-persistence/build/test-results/test/
+            server/build/reports/tests/
+            server/build/test-results/test/
             server/build/libs/*boot*.jar

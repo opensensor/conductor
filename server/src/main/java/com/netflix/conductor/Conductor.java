@@ -50,10 +50,17 @@ public class Conductor implements ApplicationRunner {
         this.environment = environment;
     }
 
-    public static void main(String[] args) throws IOException {
-        loadExternalConfig();
-
-        SpringApplication.run(Conductor.class, args);
+    public static void main(String[] args) {
+        try {
+            loadExternalConfig();
+            SpringApplication.run(Conductor.class, args);
+        } catch (Throwable failure) {
+            // A failed persistence client may leave non-daemon threads alive.
+            // Exit only when initial startup failed so the process supervisor
+            // can retry; successful startup retains Spring's normal lifecycle.
+            log.error("Conductor startup failed", failure);
+            System.exit(1);
+        }
     }
 
     @Override
