@@ -394,3 +394,31 @@ We welcome contributions from everyone!
 # License
 
 Conductor is licensed under the [Apache 2.0 License](LICENSE).
+
+## OpenSensor Sentry monitoring
+
+The server enables Sentry when `SENTRY_DSN` is set. Use `SENTRY_ENVIRONMENT`
+(`development` by default) and `SENTRY_RELEASE` to identify the deployment. Java
+request errors, uncaught exceptions, and ERROR logs containing exceptions retain
+source frames; workflow inputs, headers, request bodies, query parameters, user
+information, breadcrumbs, log messages, and exception message text are excluded.
+Request tracing samples 10% of transactions.
+
+The UI accepts `REACT_APP_SENTRY_DSN`, `REACT_APP_SENTRY_ENVIRONMENT`, and
+`REACT_APP_SENTRY_RELEASE` at build time. It captures React boundary failures and
+browser errors without session replay. Workflow IDs and payloads are removed from
+error and transaction fields. The OpenSensor storefront repository owns the UI
+release workflow: it uploads source maps privately, then removes them before
+publishing the static build.
+
+The production runtime remains subject to its immutable profile and confinement
+contract. Its JVM may reach only approved loopback services, so enabling the DSN
+alone cannot deliver errors. Production server capture requires a reviewed
+telemetry transport and a new verified runtime release. Do not relax the network
+rules or change generation fencing to enable telemetry.
+
+A separate five-minute health probe for the API and UI is active in the
+`conductor-hosting` Sentry project. It runs as the workstation user's systemd timer
+because the hosting node receives HTTP 403 under current ingress rules. Missing
+check-ins therefore also detect loss of the monitoring workstation. Source and
+installation details live in `storefront/k8s/local-hosting/conductor-hosting/monitoring`.

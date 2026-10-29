@@ -29,6 +29,8 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.FileSystemResource;
 
+import io.sentry.Sentry;
+
 // Prevents from the datasource beans to be loaded, AS they are needed only for specific databases.
 // In case that SQL database is selected this class will be imported back in the appropriate
 // database persistence module.
@@ -59,6 +61,8 @@ public class Conductor implements ApplicationRunner {
             // Exit only when initial startup failed so the process supervisor
             // can retry; successful startup retains Spring's normal lifecycle.
             log.error("Conductor startup failed", failure);
+            Sentry.captureException(failure);
+            Sentry.flush(2000);
             System.exit(1);
         }
     }

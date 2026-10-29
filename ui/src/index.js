@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom";
+import { ErrorBoundary } from "./sentry";
 import "./index.css";
 import App from "./App";
 import * as serviceWorker from "./serviceWorker";
@@ -27,7 +28,9 @@ ReactDOM.render(
         <CssBaseline />
         <ReactQueryDevtools initialIsOpen={true} />
 
-        <App />
+        <ErrorBoundary fallback={<p>The workflow interface could not load. Reload to try again.</p>}>
+          <App />
+        </ErrorBoundary>
       </BrowserRouter>
     </ThemeProvider>
   </QueryClientProvider>,
